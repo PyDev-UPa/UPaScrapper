@@ -14,7 +14,7 @@ allLines = allLines[1:len(allLines)-7]
 
 #TODO get rid of none country items in the list
 def mineLine(line):
-    '''mineLine takes a line from seznamStatuCZ in from of a string, locates positions of Czech name of the country and group it belongs to and returns a tupple of group and country'''
+    '''mineLine takes a line from scrapped page in from of a string, locates positions of Czech name of the country and group it belongs to and returns a tupple of group and country'''
     quotesPosition = []
     angleBracketPos = []
 
