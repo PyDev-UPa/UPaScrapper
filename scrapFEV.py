@@ -75,10 +75,9 @@ for pair in statesAndGroups:
     worksheet.cell(row=curRow, column=2).value = pair[0]
 
     if pair[0] in groupKeys.keys():
-        worksheet.cell(row=curRow, column=3).value = groupKeys[pair[0]][0]
-        worksheet.cell(row=curRow, column=4).value = groupKeys[pair[0]][1]
-        worksheet.cell(row=curRow, column=5).value = groupKeys[pair[0]][2]
-        worksheet.cell(row=curRow, column=6).value = groupKeys[pair[0]][3]
+        for i in range(4):
+            #Fills in 4 columns with values according to the group the state belongs too (the values are stored as a tupple in the dictionary)
+            worksheet.cell(row=curRow, column= i + 3).value = groupKeys[pair[0]][i]
 
 bottomRight = str(openpyxl.utils.get_column_letter(worksheet.max_column)) + str(worksheet.max_row)
 topLeft = "A1"
