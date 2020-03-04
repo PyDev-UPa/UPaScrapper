@@ -6,6 +6,16 @@ and creates a list containing countries and groups from the html code for furthe
 import requests, bs4, openpyxl
 
 fevUrl = 'https://www.upce.cz/uznavani-zahranicniho-vzdelavani'
+groupKeys = {
+'gA': ('Ano', 'Ano', 'Ano', ''),
+'gB': ('Ne', 'Ano', 'Ano', ''),
+'gC': ('Ne', 'Ne', 'Ano', ''),
+'gD': ('Za podmínky*', 'Ano', 'Ano', '*Zahraniční škola potvrdí, že student je absolvent (emailem, zapečetěnou obálkou s transkriptem, ověření umožňují webové stránky školy'),
+'gE_Germany': ('Za podmínky*', 'Ano', 'Ano', 'Řízení musí mít vždy kladný výsledek. *Zahraniční škola potvrdí, že student je absolvent (emailem, zapečetěnou obálkou s transkriptem, ověření umožňují webové stránky školy'),
+'gE_Visegrad': ('Není třeba*', 'Není třeba*', 'Není třeba*', '*Uznání zahraničního vzdělání není vyžadováno'),
+'gE_Canada': ('Za podmínky*', 'Ne', 'Ano', '*Zahraniční škola potvrdí, že student je absolvent (emailem, zapečetěnou obálkou s transkriptem, ověření umožňují webové stránky školy'),
+'gE_Slovenia': ('Ano*', 'Ano*', 'Ano*', '*U středoškolských a magisterských procesů, není uznání zahraničního vzdělání vyžadováno.')
+}
 
 sourcePage = requests.get(fevUrl)
 sourceSoup = bs4.BeautifulSoup(sourcePage.text, 'html.parser')
@@ -64,53 +74,12 @@ for pair in statesAndGroups:
     worksheet.cell(row=curRow, column=1).value = pair[1]
     worksheet.cell(row=curRow, column=2).value = pair[0]
 
-    if pair[0] == "gA":
-        worksheet.cell(row=curRow, column=3).value = 'Ano'
-    else:
-        worksheet.cell(row=curRow, column=3).value = 'Ne'
+    if pair[0] in groupKeys.keys():
+        worksheet.cell(row=curRow, column=3).value = groupKeys[pair[0]][0]
+        worksheet.cell(row=curRow, column=4).value = groupKeys[pair[0]][1]
+        worksheet.cell(row=curRow, column=5).value = groupKeys[pair[0]][2]
+        worksheet.cell(row=curRow, column=6).value = groupKeys[pair[0]][3]
 
-    if pair[0] in ['gA', 'gB']:
-        worksheet.cell(row=curRow, column=4).value = 'Ano'
-    else:
-        worksheet.cell(row=curRow, column=4).value = 'Ne'
-
-    if pair[0] in ['gA', 'gB', 'gC']:
-        worksheet.cell(row=curRow, column=5).value = 'Ano'
-    else:
-        worksheet.cell(row=curRow, column=5).value = 'Ne'
-
-    if pair[0] == 'gD':
-        worksheet.cell(row=curRow, column=3).value = 'Za podmínky*'
-        worksheet.cell(row=curRow, column=4).value = 'Ano'
-        worksheet.cell(row=curRow, column=5).value = 'Ano'
-        worksheet.cell(row=curRow, column=6).value = '*Zahraniční škola potvrdí, že student je absolvent (emailem, zapečetěnou obálkou s transkriptem, ověření umožňují webové stránky školy)'
-
-    if pair[0] == 'gE_Germany':
-        worksheet.cell(row=curRow, column=3).value = 'Za podmínky*'
-        worksheet.cell(row=curRow, column=4).value = 'Ano'
-        worksheet.cell(row=curRow, column=5).value = 'Ano'
-        worksheet.cell(row=curRow, column=6).value = '*Zahraniční škola potvrdí, že student je absolvent (emailem, zapečetěnou obálkou s transkriptem, ověření umožňují webové stránky školy)'
-
-    if pair[0] == 'gE_Visegrad':
-        worksheet.cell(row=curRow, column=3).value = 'Není třeba*'
-        worksheet.cell(row=curRow, column=4).value = 'Není třeba*'
-        worksheet.cell(row=curRow, column=5).value = 'Není třeba*'
-        worksheet.cell(row=curRow, column=6).value = '*Uznání zahraničního vzdělání není vyžadováno'
-
-    if pair[0] == 'gE_Canada':
-        worksheet.cell(row=curRow, column=3).value = 'Za podmínky*'
-        worksheet.cell(row=curRow, column=4).value = 'Ne'
-        worksheet.cell(row=curRow, column=5).value = 'Ano'
-        worksheet.cell(row=curRow, column=6).value = '*Zahraniční škola potvrdí, že student je absolvent (emailem, zapečetěnou obálkou s transkriptem, ověření umožňují webové stránky školy)'
-
-    if pair[0] == 'gE_Slovenia':
-        worksheet.cell(row=curRow, column=3).value = 'Ano*'
-        worksheet.cell(row=curRow, column=4).value = 'Ano*'
-        worksheet.cell(row=curRow, column=5).value = 'Ano*'
-        worksheet.cell(row=curRow, column=6).value = '*U středoškolských a magisterských procesů, není uznání zahraničního vzdělání vyžadováno.'
-
-
-#TODO make this pretty
 bottomRight = str(openpyxl.utils.get_column_letter(worksheet.max_column)) + str(worksheet.max_row)
 topLeft = "A1"
 tableRange = '{}:{}'.format(topLeft ,bottomRight)
