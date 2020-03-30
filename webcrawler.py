@@ -6,7 +6,7 @@ INPUT: URL of the homepage
 OUTPUT: list of URLs
 '''
 
-import requests
+import requests, time
 from bs4 import BeautifulSoup
 
 def crawl(url):
@@ -25,7 +25,10 @@ def crawl(url):
             urls.remove(url)
     return urls
 
-def containsDomain(url): # checks whether url is whole or just a subdirectory
+def containsDomain(url):
+    '''
+    checks whether url is whole or just a subdirectory
+    '''
     if url[:4] == 'http':
         return True
 
@@ -37,6 +40,7 @@ def addDomain(subdirectory, domain): # adds domain to subdirectory to create ful
     return url
 
 def selectUpce(urlList):
+    'selects only upce.cz webpages'
     urls = [x for x in urlList if 'en' in x[:3] or 'upce.cz' in x] # select only upce webpages
     return urls
 
@@ -48,5 +52,7 @@ if __name__ == '__main__':
     for url in results: # add domain to addresses where it was missing
         if containsDomain(url) != True:
             results[results.index(url)] = addDomain(url, 'https://www.upce.cz')
-    for i in results:
-        print(i)
+    for url in results:
+        print('Checking: {}'.format(url))
+        print(requests.get(url).status_code)
+        time.sleep(2)
