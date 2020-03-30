@@ -19,10 +19,18 @@ def crawl(url):
     soup = BeautifulSoup(page.text, features='html.parser')
     hrefs = soup.find_all('a', href=True)
     urls = [x.get('href') for x in hrefs] # get only URLs
-    # urls = [x for x in urls if 'en/' in x or 'upce.cz' in x] #get rid of none upce urls
+
     for url in urls: # remove mailto: links
         if 'mailto' in url:
             urls.remove(url)
+
+    helper = list() # remove duplicates
+    for url in urls:
+        if url not in helper:
+            helper.append(url)
+    urls = helper
+    del helper
+
     return urls
 
 def containsDomain(url):
@@ -47,12 +55,17 @@ def selectUpce(urlList):
 
 if __name__ == '__main__':
 
-    results = crawl('https://www.upce.cz/en')
-    results = selectUpce(results)
-    for url in results: # add domain to addresses where it was missing
+    visited = dict()
+    toVisit = list()
+
+    toVisit = crawl('https://www.upce.cz/en')
+    toVisit = selectUpce(toVisit)
+    for url in toVisit: # add domain to addresses where it was missing
         if containsDomain(url) != True:
-            results[results.index(url)] = addDomain(url, 'https://www.upce.cz')
-    for url in results:
-        print('Checking: {}'.format(url))
-        print(requests.get(url).status_code)
-        time.sleep(2)
+            toVisit[toVisit.index(url)] = addDomain(url, 'https://www.upce.cz')
+    for url in toVisit:
+        if url not in visited.keys():
+            print('Checking: {}'.format(url))
+            visited.setdefault(url, {'statusCode': requests.get(url).status_code})
+            print(visited[url]['statusCode'])
+            time.sleep(2)
