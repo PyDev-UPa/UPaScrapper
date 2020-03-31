@@ -6,10 +6,11 @@ INPUT: URL of the homepage
 OUTPUT: list of URLs
 '''
 
-import requests, time
+import logging
+import requests, time, re
 from bs4 import BeautifulSoup
 
-def crawl(url):
+def crawl(url, remove_patterns = []):
     '''
     finds all links on a page and inputs them in a list
     INPUT: url
@@ -20,18 +21,18 @@ def crawl(url):
     hrefs = soup.find_all('a', href=True)
     urls = [x.get('href') for x in hrefs] # get only URLs
 
-    for url in urls: # remove mailto: links
-        if 'mailto' in url:
-            urls.remove(url)
+    ret_urls = []
+    for url in urls: 
+        for p in remove_patterns: # remove unwanted links
+            if p.search(url):
+                logging.info("Removing url: {}".format(url))
+                urls.remove(url)
+                break
+        else:
+            if url not in ret_urls: # check for duplicates
+                ret_urls.append(url)
 
-    helper = list() # remove duplicates
-    for url in urls:
-        if url not in helper:
-            helper.append(url)
-    urls = helper
-    del helper
-
-    return urls
+    return ret_urls
 
 def containsDomain(url):
     '''
@@ -54,11 +55,17 @@ def selectUpce(urlList):
 
 
 if __name__ == '__main__':
+    remove_patterns = [
+        re.compile("^mailto:"),
+        re.compile("^https://(www.)?youtube.com"),
+        re.compile("^https://(www.)?linkedin.com"),
+        re.compile("^https://(www.)?instagram.com"),
+    ]
 
     visited = dict()
     toVisit = list()
 
-    toVisit = crawl('https://www.upce.cz/en')
+    toVisit = crawl('https://www.upce.cz/en', remove_patterns)
     toVisit = selectUpce(toVisit)
     for url in toVisit: # add domain to addresses where it was missing
         if containsDomain(url) != True:
@@ -69,3 +76,4 @@ if __name__ == '__main__':
             visited.setdefault(url, {'statusCode': requests.get(url).status_code})
             print(visited[url]['statusCode'])
             time.sleep(2)
+    ...
