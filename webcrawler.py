@@ -10,7 +10,10 @@ import logging
 import requests, time, re
 from bs4 import BeautifulSoup
 
-def crawl(url, remove_patterns = []):
+
+logging.basicConfig(level=logging.INFO)
+
+def crawl(url):
     '''
     finds all links on a page and inputs them in a list
     INPUT: url
@@ -21,6 +24,9 @@ def crawl(url, remove_patterns = []):
     hrefs = soup.find_all('a', href=True)
     urls = [x.get('href') for x in hrefs] # get only URLs
 
+    return urls
+
+def filter_urls(urls, remove_patterns = []):
     ret_urls = []
     for url in urls: 
         for p in remove_patterns: # remove unwanted links
@@ -29,10 +35,16 @@ def crawl(url, remove_patterns = []):
                 urls.remove(url)
                 break
         else:
-            if url not in ret_urls: # check for duplicates
-                ret_urls.append(url)
+            if isUpceWebsite(url):
+                if containsDomain(url) != True:
+                    logging.info("Domain added to: {}".format(url))
+                    url = addDomain(url, 'https://www.upce.cz')
+
+                if url not in ret_urls: # check for duplicates
+                    ret_urls.append(url)
 
     return ret_urls
+
 
 def containsDomain(url):
     '''
@@ -41,6 +53,7 @@ def containsDomain(url):
     if url[:4] == 'http':
         return True
 
+
 def addDomain(subdirectory, domain): # adds domain to subdirectory to create full url
     '''
     adds given domain to url without any
@@ -48,10 +61,13 @@ def addDomain(subdirectory, domain): # adds domain to subdirectory to create ful
     url = domain + subdirectory
     return url
 
-def selectUpce(urlList):
-    'selects only upce.cz webpages'
-    urls = [x for x in urlList if 'en' in x[:3] or 'upce.cz' in x] # select only upce webpages
-    return urls
+
+def isUpceWebsite(url):
+    'returns True for upce.cz webpages'
+    ret_val = True if 'en' in url[:3] or 'upce.cz' in url else False
+    if not ret_val:
+        logging.info("Url not in Upce domain: {}".format(url))
+    return ret_val
 
 
 if __name__ == '__main__':
@@ -65,11 +81,9 @@ if __name__ == '__main__':
     visited = dict()
     toVisit = list()
 
-    toVisit = crawl('https://www.upce.cz/en', remove_patterns)
-    toVisit = selectUpce(toVisit)
-    for url in toVisit: # add domain to addresses where it was missing
-        if containsDomain(url) != True:
-            toVisit[toVisit.index(url)] = addDomain(url, 'https://www.upce.cz')
+    toVisit = crawl('https://www.upce.cz/en')
+    toVisit = filter_urls(toVisit, remove_patterns)
+    
     for url in toVisit:
         if url not in visited.keys():
             print('Checking: {}'.format(url))
