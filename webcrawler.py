@@ -35,47 +35,36 @@ def filter_urls(urls, remove_patterns = []):
                 urls.remove(url)
                 break
         else:
-            if isUpceWebsite(url):
-                if containsDomain(url) != True:
-                    logging.info("Domain added to: {}".format(url))
-                    url = addDomain(url, 'https://www.upce.cz')
-
-                if url not in ret_urls: # check for duplicates
-                    ret_urls.append(url)
+            url = normalize_url(url)
+            if url not in ret_urls: # check for duplicates
+                ret_urls.append(url)
 
     return ret_urls
 
 
-def containsDomain(url):
-    '''
-    checks whether url is whole or just a subdirectory
-    '''
-    if url[:4] == 'http':
-        return True
+def normalize_url(url, base_domain="https://www.upce.cz/"):
+    patterns = [
+        (re.compile("^/"), base_domain),
+        (re.compile("/$"), "")
+    ]
+    ret_url = url
+    for p in patterns:
+        ret_url = p[0].sub(p[1], ret_url)
 
-
-def addDomain(subdirectory, domain): # adds domain to subdirectory to create full url
-    '''
-    adds given domain to url without any
-    '''
-    url = domain + subdirectory
-    return url
-
-
-def isUpceWebsite(url):
-    'returns True for upce.cz webpages'
-    ret_val = True if 'en' in url[:3] or 'upce.cz' in url else False
-    if not ret_val:
-        logging.info("Url not in Upce domain: {}".format(url))
-    return ret_val
+    if ret_url != url:
+        logging.info("URL: {} normalized to {}".format(url, ret_url))
+    return ret_url
 
 
 if __name__ == '__main__':
     remove_patterns = [
         re.compile("^mailto:"),
+        re.compile("^#"),
+        re.compile("^/cas\\?"),
         re.compile("^https://(www.)?youtube.com"),
         re.compile("^https://(www.)?linkedin.com"),
         re.compile("^https://(www.)?instagram.com"),
+        re.compile("^https://(www.)?drupalarts.cz"),
     ]
 
     visited = dict()
