@@ -11,8 +11,8 @@ import requests, time, re, json
 import pyperclip # for testing only
 from bs4 import BeautifulSoup
 
+# logging.basicConfig(level=logging.INFO)
 
-logging.basicConfig(level=logging.INFO)
 
 def crawl(url):
     '''
@@ -26,6 +26,7 @@ def crawl(url):
     urls = [x.get('href') for x in hrefs] # get only URLs
 
     return urls
+
 
 def filter_urls(urls, remove_patterns = []):
     ret_urls = []
@@ -57,16 +58,16 @@ def normalize_url(url, base_domain="https://www.upce.cz/"):
     return ret_url
 
 
+def read_remove_pattern(file = "webcrawler_remove.txt"):
+    ret = []
+    with open(file) as f:
+        for l in f.readlines():
+            ret.append(re.compile(l.strip()))
+    return ret
+
+
 if __name__ == '__main__':
-    remove_patterns = [
-        re.compile("^mailto:"),
-        re.compile("^#"),
-        re.compile("^/cas\\?"),
-        re.compile("^https://(www.)?youtube.com"),
-        re.compile("^https://(www.)?linkedin.com"),
-        re.compile("^https://(www.)?instagram.com"),
-        re.compile("^https://(www.)?drupalarts.cz"),
-    ]
+    remove_patterns = read_remove_pattern()
 
     visited = dict()
     toVisit = list()
