@@ -11,7 +11,7 @@ import requests, time, re, json
 import pyperclip # for testing only
 from bs4 import BeautifulSoup
 
-# logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO)
 
 
 def crawl(url):
@@ -23,8 +23,7 @@ def crawl(url):
     page = requests.get(url)
     soup = BeautifulSoup(page.text, features='html.parser')
     hrefs = soup.find_all('a', href=True)
-    urls = [x.get('href') for x in hrefs] # get only URLs
-
+    urls = [x.get('href') for x in hrefs if x.get('href') != ''] # get only URLs
     return urls
 
 
@@ -47,7 +46,8 @@ def filter_urls(urls, remove_patterns = []):
 def normalize_url(url, base_domain="https://www.upce.cz/"):
     patterns = [
         (re.compile("^/"), base_domain),
-        (re.compile("/$"), "")
+        (re.compile("/$"), ""),
+        (re.compile('^node'), '{}en/node'.format(base_domain))
     ]
     ret_url = url
     for p in patterns:
@@ -79,7 +79,7 @@ if __name__ == '__main__':
         if url not in visited.keys():
             print('Checking: {}'.format(url))
             visited.setdefault(url, {'statusCode': requests.get(url).status_code})
-            visited.setdefault(url, {'mother': url})
+            visited[url].setdefault('mother', 'https://www.upce.cz/en')
             print(visited[url]['statusCode'])
             time.sleep(2)
     with open('data.json', 'w') as db:
