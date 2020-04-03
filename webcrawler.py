@@ -7,7 +7,8 @@ OUTPUT: list of URLs
 '''
 
 import logging
-import requests, time, re
+import requests, time, re, json
+import pyperclip # for testing only
 from bs4 import BeautifulSoup
 
 
@@ -28,7 +29,7 @@ def crawl(url):
 
 def filter_urls(urls, remove_patterns = []):
     ret_urls = []
-    for url in urls: 
+    for url in urls:
         for p in remove_patterns: # remove unwanted links
             if p.search(url):
                 logging.info("Removing url: {}".format(url))
@@ -72,11 +73,13 @@ if __name__ == '__main__':
 
     toVisit = crawl('https://www.upce.cz/en')
     toVisit = filter_urls(toVisit, remove_patterns)
-    
+
     for url in toVisit:
         if url not in visited.keys():
             print('Checking: {}'.format(url))
             visited.setdefault(url, {'statusCode': requests.get(url).status_code})
+            visited.setdefault(url, {'mother': url})
             print(visited[url]['statusCode'])
             time.sleep(2)
-    ...
+    with open('data.json', 'w') as db:
+        json.dump(visited, db)
