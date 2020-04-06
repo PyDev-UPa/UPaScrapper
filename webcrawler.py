@@ -25,11 +25,15 @@ def crawl(url):
     hrefs = soup.find_all('a', href=True)
     urls = [x.get('href') for x in hrefs if x.get('href') != ''] # get only URLs
     patterns = read_pattern('webcrawler_remove.txt')
+    to_remove = list()
     for url in urls:
+        print(url)
         for p in patterns:
             if p.search(url):
                 logging.info('Removing: {}'.format(url))
-                urls.remove(url)
+                to_remove.append(url)
+    for url in to_remove:
+            urls.remove(url)
     return urls
 
 
@@ -86,12 +90,6 @@ if __name__ == '__main__':
 
     toCrawl = crawl('https://www.upce.cz/en')
     toCheck, toCrawl = filter_urls(toCrawl, patterns)
-
-    for i in toCheck:
-        print(i)
-    print('-------------------')
-    for i in toCrawl:
-        print(i)
 
     for url in toCrawl:
         if url not in visited.keys():
