@@ -24,24 +24,36 @@ def crawl(url):
     soup = BeautifulSoup(page.text, features='html.parser')
     hrefs = soup.find_all('a', href=True)
     urls = [x.get('href') for x in hrefs if x.get('href') != ''] # get only URLs
+    patterns = read_pattern('webcrawler_remove.txt')
+    for url in urls:
+        for p in patterns:
+            if p.search(url):
+                logging.info('Removing: {}'.format(url))
+                urls.remove(url)
     return urls
 
 
 def filter_urls(urls, remove_patterns = []):
-    ret_urls = []
+    '''
+    filters urls in two groups (to be checked, to be crawled and checked)
+    '''
+    to_check = []
+    to_crawl = []
     for url in urls:
         for p in remove_patterns: # remove unwanted links
             if p.search(url):
-                logging.info("Removing url: {}".format(url))
-                urls.remove(url)
+                url = normalize_url(url)
+                logging.info("Url only to be checked: {}".format(url))
+                if url not in to_check:
+                    to_check.append(url)
                 break
         else:
             url = normalize_url(url)
-            if url not in ret_urls: # check for duplicates
-                ret_urls.append(url)
+            if url not in to_crawl: # check for duplicates
+                logging.info('Url to be checked and crawled: {}'.format(url))
+                to_crawl.append(url)
 
-    return ret_urls
-
+    return to_check, to_crawl
 
 def normalize_url(url, base_domain="https://www.upce.cz/"):
     patterns = [
@@ -58,7 +70,7 @@ def normalize_url(url, base_domain="https://www.upce.cz/"):
     return ret_url
 
 
-def read_remove_pattern(file = "webcrawler_remove.txt"):
+def read_pattern(file):
     ret = []
     with open(file) as f:
         for l in f.readlines():
@@ -67,15 +79,21 @@ def read_remove_pattern(file = "webcrawler_remove.txt"):
 
 
 if __name__ == '__main__':
-    remove_patterns = read_remove_pattern()
+    patterns = read_pattern('webcrawler_check.txt')
 
     visited = dict()
-    toVisit = list()
+    toCrawl = list()
 
-    toVisit = crawl('https://www.upce.cz/en')
-    toVisit = filter_urls(toVisit, remove_patterns)
+    toCrawl = crawl('https://www.upce.cz/en')
+    toCheck, toCrawl = filter_urls(toCrawl, patterns)
 
-    for url in toVisit:
+    for i in toCheck:
+        print(i)
+    print('-------------------')
+    for i in toCrawl:
+        print(i)
+
+    for url in toCrawl:
         if url not in visited.keys():
             print('Checking: {}'.format(url))
             visited.setdefault(url, {'statusCode': requests.get(url).status_code})
