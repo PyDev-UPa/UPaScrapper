@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
-#logging.disable(logging.CRITICAL)
+#logging.disable(logging.INFO)
 
 def crawl(url):
     '''
@@ -69,7 +69,8 @@ def normalize_url(url, base_domain="https://www.upce.cz/"):
     patterns = [
         (re.compile("^/"), base_domain),
         (re.compile("/$"), ""),
-        (re.compile('^node'), '{}en/node'.format(base_domain))
+        (re.compile('^node'), '{}en/node'.format(base_domain)),
+        (re.compile('en/.*'), base_domain)
     ]
     ret_url = url
     for p in patterns:
@@ -132,18 +133,17 @@ if __name__ == '__main__':
                     if url not in temp:
                         temp.append(url)
                         result.update(check_url(url, parent))
-                        time.sleep(2)
+                        time.sleep(1)
 
                 for url in toCrawl:
                     temp = [x for x in result.keys()]
                     if url not in temp:
                         temp.append(url)
                         result.update(check_url(url, parent))
-                        time.sleep(2)
+                        time.sleep(1)
                         logging.info('Adding to crawlBank: {}'.format(url))
                         crawlBank.append(url)
         crawlBankSizeAfter = len(crawlBank)
-        logging.info('Size before: {} - Size after: {}'.format(crawlBankSizeBefore, crawlBankSizeAfter))
 
     with open('data.json', 'w') as db:
         json.dump(result, db)
