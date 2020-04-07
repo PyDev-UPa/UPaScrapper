@@ -10,41 +10,42 @@ import logging
 import requests, time, re, json
 import pyperclip # for testing only
 from bs4 import BeautifulSoup
+from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
-
+#logging.disable(logging.CRITICAL)
 
 def crawl(url):
     '''
     finds all links on a page and inputs them in a list
     INPUT: url
-    OUTPUT: list of links
+    OUTPUT: list of links, url of crawled page
     '''
+    parent = url
     page = requests.get(url)
     soup = BeautifulSoup(page.text, features='html.parser')
     hrefs = soup.find_all('a', href=True)
-    urls = [x.get('href') for x in hrefs if x.get('href') != ''] # get only URLs
+    urls = [x.get('href') for x in hrefs if x.get('href')] # get only URLs
     patterns = read_pattern('webcrawler_remove.txt')
     to_remove = list()
     for url in urls:
-        print(url)
         for p in patterns:
             if p.search(url):
                 logging.info('Removing: {}'.format(url))
                 to_remove.append(url)
     for url in to_remove:
             urls.remove(url)
-    return urls
+    return urls, parent
 
 
-def filter_urls(urls, remove_patterns = []):
+def filter_urls(urls, filter_patterns = []):
     '''
     filters urls in two groups (to be checked, to be crawled and checked)
     '''
     to_check = []
     to_crawl = []
     for url in urls:
-        for p in remove_patterns: # remove unwanted links
+        for p in filter_patterns: # remove unwanted links
             if p.search(url):
                 url = normalize_url(url)
                 logging.info("Url only to be checked: {}".format(url))
@@ -60,6 +61,11 @@ def filter_urls(urls, remove_patterns = []):
     return to_check, to_crawl
 
 def normalize_url(url, base_domain="https://www.upce.cz/"):
+    '''
+    adds domain to link if it is only a subdirectory and not whole url
+    Input: string (whole url or a subdirectory), string (domain)
+    Output: whole url (domain + subdirectory)
+    '''
     patterns = [
         (re.compile("^/"), base_domain),
         (re.compile("/$"), ""),
@@ -75,28 +81,69 @@ def normalize_url(url, base_domain="https://www.upce.cz/"):
 
 
 def read_pattern(file):
+    '''
+    loads patterns from a text file as regexes
+    Input: text file
+    Output: list of regexes
+    '''
     ret = []
     with open(file) as f:
-        for l in f.readlines():
+        for l in f:
             ret.append(re.compile(l.strip()))
+    return ret
+
+def check_url(url, parent):
+    '''
+    checks statusCode of url and returns a dictionary of status code,
+    parent webpage and timestamp of the check
+    Input: url, parentpage
+    Output: dictionary in dictionary with status code and parent of the urls
+    e.g. {'checked url': {'status code': '404', 'parent': 'http://www.where.from.leads.link.to.this.url'}}
+    '''
+
+    logging.info('Checking: {}'.format(url))
+    ret = {
+            url: {'status_code': requests.get(url).status_code,
+                'parent': parent,
+                'time': datetime.now().strftime('%A %b %d, %Y - %H:%M:%S')}
+            }
+
     return ret
 
 
 if __name__ == '__main__':
     patterns = read_pattern('webcrawler_check.txt')
 
-    visited = dict()
-    toCrawl = list()
+    result = dict()
+    crawlBank = ['http://www.upce.cz/en']
+    crawlBankSizeBefore = len(crawlBank)
+    crawlBankSizeAfter = 2
 
-    toCrawl = crawl('https://www.upce.cz/en')
-    toCheck, toCrawl = filter_urls(toCrawl, patterns)
+    while crawlBankSizeAfter > crawlBankSizeBefore:
+        crawlBankSizeBefore = crawlBankSizeAfter
+        tempBank = [x for x in result.keys()]
+        for bankUrl in crawlBank:
+            if bankUrl not in tempBank:
+                newLinks, parent = crawl(bankUrl)
+                toCheck, toCrawl = filter_urls(newLinks, patterns)
 
-    for url in toCrawl:
-        if url not in visited.keys():
-            print('Checking: {}'.format(url))
-            visited.setdefault(url, {'statusCode': requests.get(url).status_code})
-            visited[url].setdefault('mother', 'https://www.upce.cz/en')
-            print(visited[url]['statusCode'])
-            time.sleep(2)
+                for url in toCheck:
+                    temp = [x for x in result.keys()]
+                    if url not in temp:
+                        temp.append(url)
+                        result.update(check_url(url, parent))
+                        time.sleep(2)
+
+                for url in toCrawl:
+                    temp = [x for x in result.keys()]
+                    if url not in temp:
+                        temp.append(url)
+                        result.update(check_url(url, parent))
+                        time.sleep(2)
+                        logging.info('Adding to crawlBank: {}'.format(url))
+                        crawlBank.append(url)
+        crawlBankSizeAfter = len(crawlBank)
+        logging.info('Size before: {} - Size after: {}'.format(crawlBankSizeBefore, crawlBankSizeAfter))
+
     with open('data.json', 'w') as db:
-        json.dump(visited, db)
+        json.dump(result, db)
