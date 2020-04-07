@@ -1,7 +1,9 @@
 ^/cas\\?
 ^https://(www.)?youtube.com
+^https://(www.)?youtu.be
 ^https://(www.)?linkedin.com
 ^https://(www.)?instagram.com
 ^https://(www.)?facebook.com
+^https://(www.)?twitter.com
 ^https://(www.)?drupalarts.cz
 ^$
