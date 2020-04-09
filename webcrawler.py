@@ -70,7 +70,7 @@ def normalize_url(url, base_domain="https://www.upce.cz/"):
         (re.compile("^/"), base_domain),
         (re.compile("/$"), ""),
         (re.compile('^node'), '{}en/node'.format(base_domain)),
-        (re.compile('en/.*'), base_domain)
+        (re.compile('^en'), base_domain)
     ]
     ret_url = url
     for p in patterns:

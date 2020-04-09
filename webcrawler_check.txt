@@ -12,4 +12,5 @@
 ^https://www.unicom.upce.cz
 ^http://posta.student.upce.cz
 upce.cz$
+^https://www.upce.cz/(?!en)
 ^$
