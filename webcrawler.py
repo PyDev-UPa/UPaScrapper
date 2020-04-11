@@ -15,14 +15,14 @@ from datetime import datetime
 logging.basicConfig(level=logging.INFO)
 #logging.disable(logging.INFO)
 
-def crawl(url):
+def crawl(resPage):
     '''
     finds all links on a page and inputs them in a list
-    INPUT: url
+    INPUT: requests object (crawled page)
     OUTPUT: list of links, url of crawled page
     '''
-    parent = url
-    page = requests.get(url)
+    parent = resPage.url
+    page = resPage
     soup = BeautifulSoup(page.text, features='html.parser')
     hrefs = soup.find_all('a', href=True)
     urls = [x.get('href') for x in hrefs if x.get('href')] # get only URLs
@@ -93,7 +93,7 @@ def read_pattern(file):
             ret.append(re.compile(l.strip()))
     return ret
 
-def check_url(url, parent):
+def check_url(resPage, parent):
     '''
     checks statusCode of url and returns a dictionary of status code,
     parent webpage and timestamp of the check
@@ -125,7 +125,8 @@ if __name__ == '__main__':
         tempBank = [x for x in result.keys()]
         for bankUrl in crawlBank:
             if bankUrl not in tempBank:
-                newLinks, parent = crawl(bankUrl)
+                resPage = requests.get(bankUrl)
+                newLinks, parent = crawl(resPage)
                 toCheck, toCrawl = filter_urls(newLinks, patterns)
 
                 for url in toCheck:
