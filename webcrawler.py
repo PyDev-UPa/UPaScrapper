@@ -12,16 +12,15 @@ import pyperclip # for testing only
 from bs4 import BeautifulSoup
 from datetime import datetime
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(filename='webcrawler-{}.log'.format(datetime.now().strftime('%b-%d-%H:%M')), level=logging.INFO)
 #logging.disable(logging.INFO)
 
 def crawl(resPage):
     '''
     finds all links on a page and inputs them in a list
-    INPUT: requests object (crawled page)
+    INPUT: url
     OUTPUT: list of links, url of crawled page
     '''
-    parent = resPage.url
     page = resPage
     soup = BeautifulSoup(page.text, features='html.parser')
     hrefs = soup.find_all('a', href=True)
@@ -35,7 +34,8 @@ def crawl(resPage):
                 to_remove.append(url)
     for url in to_remove:
             urls.remove(url)
-    return urls, parent
+    urls = [normalize_url(x) for x in urls]
+    return urls
 
 
 def filter_urls(urls, filter_patterns = []):
@@ -45,18 +45,16 @@ def filter_urls(urls, filter_patterns = []):
     to_check = []
     to_crawl = []
     for url in urls:
-        for p in filter_patterns: # remove unwanted links
+        for p in filter_patterns: # pick urls to be further crawled 
             if p.search(url):
-                url = normalize_url(url)
-                logging.info("Url only to be checked: {}".format(url))
-                if url not in to_check:
-                    to_check.append(url)
+                if url not in to_crawl:
+#                    logging.info(f"Url to be crawled: {url}")
+                    to_crawl.append(url)
                 break
         else:
-            url = normalize_url(url)
-            if url not in to_crawl: # check for duplicates
-                logging.info('Url to be checked and crawled: {}'.format(url))
-                to_crawl.append(url)
+            if url not in to_check:
+#                logging.info('Url to be checked: {}'.format(url))
+                to_check.append(url)
 
     return to_check, to_crawl
 
@@ -77,7 +75,8 @@ def normalize_url(url, base_domain="https://www.upce.cz/"):
         ret_url = p[0].sub(p[1], ret_url)
 
     if ret_url != url:
-        logging.info("URL: {} normalized to {}".format(url, ret_url))
+        pass
+#        logging.info("URL: {} normalized to {}".format(url, ret_url))
     return ret_url
 
 
@@ -93,7 +92,7 @@ def read_pattern(file):
             ret.append(re.compile(l.strip()))
     return ret
 
-def check_url(resPage, parent):
+def check_url(url, parent):
     '''
     checks statusCode of url and returns a dictionary of status code,
     parent webpage and timestamp of the check
@@ -103,48 +102,76 @@ def check_url(resPage, parent):
     '''
 
     logging.info('Checking: {}'.format(url))
-    ret = {
-            url: {'status_code': requests.get(url).status_code,
+    try:
+        checkPage = requests.get(url, timeout=10)
+        ret = {
+            url: {'status_code': checkPage.status_code,
                 'parent': parent,
-                'time': datetime.now().strftime('%A %b %d, %Y - %H:%M:%S')}
-            }
-
+                }}
+    except OSError:
+        ret = {
+            url: {'error': 'requests fail',
+                'parent': parent,
+                }}
+    except requests.exceptions.Timeout:
+        ret = {
+            url: {'error': 'requests timed out',
+                'parent': parent,
+                }}
+    except UnicodeError:
+        ret = {
+            url: {'error': 'requests UnicodeError',
+                'parent': parent,
+                }}
+        ret
     return ret
 
 
 if __name__ == '__main__':
-    patterns = read_pattern('webcrawler_check.txt')
+    patterns = read_pattern('webcrawler_crawl.txt')
 
     result = dict()
-    crawlBank = ['http://www.upce.cz/en']
-    crawlBankSizeBefore = len(crawlBank)
-    crawlBankSizeAfter = 2
+    crawlBank = ['https://www.upce.cz/en']
+    crawled = []
 
-    while crawlBankSizeAfter > crawlBankSizeBefore:
-        crawlBankSizeBefore = crawlBankSizeAfter
-        tempBank = [x for x in result.keys()]
-        for bankUrl in crawlBank:
-            if bankUrl not in tempBank:
-                resPage = requests.get(bankUrl)
-                newLinks, parent = crawl(resPage)
+    while len(crawlBank) > 0:
+        logging.info(f'-------------------')
+        logging.info(f'The size of the bank is: {len(crawlBank)}')
+        logging.info(f'Next url to be crawled is: {crawlBank[0]}')
+        logging.info(f'I have already crawled {len(crawled)} urls.')
+        logging.info(f'the crawled pages are {crawled}.')
+        logging.info(f'-------------------')
+        bankUrl = crawlBank.pop(0)
+        if bankUrl not in crawled:
+            logging.info(f'Crawling: {bankUrl}')
+            try:
+                resPage = requests.get(bankUrl, timeout=10)
+                newLinks = crawl(resPage)
                 toCheck, toCrawl = filter_urls(newLinks, patterns)
 
                 for url in toCheck:
-                    temp = [x for x in result.keys()]
-                    if url not in temp:
-                        temp.append(url)
-                        result.update(check_url(url, parent))
+                    checked = [x for x in result.keys()]
+                    if url not in checked:
+                        result.update(check_url(url, bankUrl))
                         time.sleep(1)
 
+                addToCrawlBank = []
                 for url in toCrawl:
-                    temp = [x for x in result.keys()]
-                    if url not in temp:
-                        temp.append(url)
-                        result.update(check_url(url, parent))
+                    if url not in crawled:
+                        result.update(check_url(url, bankUrl))
                         time.sleep(1)
-                        logging.info('Adding to crawlBank: {}'.format(url))
+                        if url not in addToCrawlBank:
+                            addToCrawlBank.append(url)
+
+                for url in addToCrawlBank:
+                    if url not in crawlBank or url not in crawled:
                         crawlBank.append(url)
-        crawlBankSizeAfter = len(crawlBank)
+                        logging.info('Adding to crawlBank: {}'.format(url))
+            
+            except requests.exceptions.Timeout:
+                logging.info(f'{url} not reached in time')
+            finally:
+                crawled.append(bankUrl)
 
     with open('data.json', 'w') as db:
         json.dump(result, db)
